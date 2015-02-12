@@ -82,11 +82,11 @@ describe('Resolving through a deferral', function(){
   // Reminder: common class methods should be defined on a prototype.
 
   it('changes its promise state to "resolved"', function(){
-    /* NOTE: in strict standards language, a promise that succeeds is
-    said to be "fulfilled." Since $q and Q use their .resolve method to
-    attempt fullfillment, for simplicity's sake pledge.js will treat
-    fulfillment and resolution as synonyms, though this is non-standard.
-    There are other edge cases, but let's focus on the basics. */
+  //    NOTE: in strict standards language, a promise that succeeds is
+  //   said to be "fulfilled." Since $q and Q use their .resolve method to
+  //   attempt fullfillment, for simplicity's sake pledge.js will treat
+  //   fulfillment and resolution as synonyms, though this is non-standard.
+  //   There are other edge cases, but let's focus on the basics. 
     deferral.resolve();
     expect( promise.state ).toBe( 'resolved' );
   });
