@@ -174,6 +174,8 @@ describe("A promise's .catch(errorFn) method", function(){
   it('returns the same kind of thing that .then would', function(){
     var return1 = promise.catch( myFunc );
     var return2 = promise.then( null, myFunc );
+    console.log(return1);
+    console.log(return2);
     expect( return1 ).toEqual( return2 );
   });
 

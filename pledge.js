@@ -3,51 +3,76 @@ function $Promise() {
 	this.handlerGroups = [];
 	this.updateCbs = [];
 	this.value;
-	this.then = function(successCB, errorCB, updateCB) {
-		if (this.state === 'resolved' && successCB) {
-			successCB(this.value);
-			return;
-		};
-		if (this.state === 'rejected' && errorCB) {
-			errorCB(this.value);
-			return;
-		};
-		if (typeof successCB !== 'function') successCB = false;
-		if (typeof errorCB !== 'function') errorCB = false;
-		this.handlerGroups.push({
-			successCb: successCB,
-			errorCb: errorCB
-		});
-		if (typeof updateCB === 'function') this.updateCbs.push(updateCB);
+}
 
-		if (this.state === 'resolved') successCB(this.value);
+$Promise.prototype.then = function(successCB, errorCB, updateCB) {
+	if (this.state === 'resolved' && successCB) {
+		successCB(this.value);
+		return;
 	};
+	if (this.state === 'rejected' && errorCB) {
+		errorCB(this.value);
+		return;
+	};
+	if (typeof successCB !== 'function') successCB = false;
+	if (typeof errorCB !== 'function') errorCB = false;
+	this.handlerGroups.push({
+		successCb: successCB,
+		errorCb: errorCB,
+		forwarder: new Deferral()
+	});
+	if (typeof updateCB === 'function') this.updateCbs.push(updateCB);
+
+	return this.handlerGroups[this.handlerGroups.length-1].forwarder.$promise;
 };
 
 $Promise.prototype.callHandlers = function() {
-	if (this.state === 'resolved') {
-		var self = this;
-		this.handlerGroups.forEach( function(cbs) {
-			if (cbs.successCb)
-				cbs.successCb(self.value);
-		});
-		this.handlerGroups = [ ];
-		return;
-	} 
-
-	if (this.state === 'rejected') {
-		var self = this;
-		this.handlerGroups.forEach( function(cbs) {
-			if (cbs.errorCb)
-				cbs.errorCb(self.value);
-		});
-		this.handlerGroups = [ ];
-		return;
-	} 
+	var hGroup;
+ 	while( this.handlerGroups.length ) {
+    	hGroup = this.handlerGroups.shift();
+    	if (this.state === 'resolved') {
+      		if (hGroup.successCb) {
+      			try {
+      				var output = hGroup.successCb(this.value);
+      				if (output instanceof $Promise) {
+      					output.then(function(data) {
+      						hGroup.forwarder.resolve(data);
+      					} , function(reason) {
+      						hGroup.forwarder.reject(reason);
+      					});
+      				} else {
+      					hGroup.forwarder.resolve(output);
+      				}
+      			} catch (err) {
+      				hGroup.forwarder.reject(err);
+      			}
+      		}
+      		else hGroup.forwarder.resolve(this.value);
+    	} else if (this.state === 'rejected' ) {
+      		if (hGroup.errorCb) {
+      			try {
+      				output = hGroup.errorCb(this.value);
+      				if (output instanceof $Promise) {
+      					output.then(function(data) {
+      						hGroup.forwarder.resolve(data);
+      					} , function(reason) {
+      						hGroup.forwarder.reject(reason);
+      					});
+      				} else {
+      					hGroup.forwarder.resolve(output);
+      				}
+      			} catch (err) {
+      				hGroup.forwarder.reject(err);
+      			}
+      		
+      		}
+      		else hGroup.forwarder.reject(this.value);
+    	}
+  	}
 }
 
 $Promise.prototype.catch = function(fn) {
-	this.then(null,fn);
+	return this.then(null,fn);
 }
 
 function Deferral() {
